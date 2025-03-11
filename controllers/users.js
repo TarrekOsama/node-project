@@ -8,28 +8,17 @@ const jwt = require("jsonwebtoken");
 const jwtSign = util.promisify(jwt.sign);
 
 const signup = async (req, res, next) => {
-  const data = req.body;
-  // check if password and passwordConfirm are provided
-  if (!data.password || !data.passwordConfirm) {
-    throw new APIError("password and passwordConfirm are required", 400);
+  const { name, email, password, passwordConfirm } = req.body;
+  if (!password || !passwordConfirm) {
+      throw new APIError("password and passwordConfirm are required", 400);
   }
-  // check if password and passwordConfirm are the same
-  if (data.password !== data.passwordConfirm) {
-    throw new APIError("password and passwordConfirm must be the same", 400);
+  if (password !== passwordConfirm) {
+      throw new APIError("password and passwordConfirm must be the same", 400);
   }
-  // hash password
-  const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS);
-  const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
-
-  // create user
-  const newUser = await User.create({
-    ...data,
-    role: "user",
-    password: hashedPassword,
-  });
-
+  const newUser = await User.create({ name, email, password, role: "user" });
   res.status(201).json({ status: "success", data: { user: newUser } });
 };
+
 
 const login = async (req, res, next) => {
   const { email, password } = req.body;

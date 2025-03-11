@@ -12,19 +12,15 @@ const limiter = require("./middlewares/rate-limiter");
 
 dotenv.config();
 
-// import ROUTES
 const usersRoutes = require("./routes/users");
 const postsRoutes = require("./routes/posts");
-// UTILS
 const APIError = require("./util/APIError");
-
-// import MIDDLEWARES
 const errorHandler = require("./middlewares/errorhandler");
+const auth = require("./middlewares/auth"); // Add this
 
-// create express app
 const app = express();
 
-// MIDDLEWARES
+// Middleware
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(cors());
@@ -34,29 +30,32 @@ app.use(xss());
 app.use(hpp());
 app.use(limiter);
 
-// ROUTES
+// Routes
 const V1_PREFIX = "/api/v1";
-app.use(`${V1_PREFIX}/users`, usersRoutes);
-app.use(`${V1_PREFIX}/posts`, postsRoutes);
-// handling not found routes
+app.use(`${V1_PREFIX}/users`, usersRoutes); // Public routes (e.g., login, register)
+app.use(`${V1_PREFIX}/posts`, auth, postsRoutes); // Protect posts routes with JWT
+
+// Not Found Handler
 app.use((req, res, next) => {
-  next(new APIError(`${req.method} ${req.path} is not found`, 404));
+    next(new APIError(`${req.method} ${req.path} is not found`, 404));
 });
 
-// Global error handler middleware
+// Error Handler
 app.use(errorHandler);
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  mongoose
-    .connect(MONGO_URI)
-    .then(() => {
-      console.log("Connected to MongoDB");
-    })
-    .catch((err) => {
-      console.error("Error connecting to MongoDB", err);
-    });
-});
+const startServer = async () => {
+    try {
+        await mongoose.connect(MONGO_URI);
+        console.log("Connected to MongoDB");
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    } catch (err) {
+        console.error("Error connecting to MongoDB", err);
+    }
+};
+
+startServer();
